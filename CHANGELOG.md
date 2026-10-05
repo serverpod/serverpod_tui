@@ -1,3 +1,11 @@
+## 0.14.0
+
+- **FEAT**: Multi screen forms are now sequential prompts. Options are listed vertically with a `❯` cursor, the answers given so far are listed above the current config, and the last screen lists every answer.
+- **FEAT**: Added `FormConfiguration.vertical` to list select options vertically with a cursor. The single page `Form` keeps listing them side by side.
+- **FEAT**: Added `MultiScreenFormState.currentConfig`, `answeredConfigs` and `confirmFocusedOption`, and `FormState.selectedLabelFor`.
+- **BREAKING**: `MultiScreenForm` no longer renders Back/Next/Submit buttons. `backButtonActivationKey`, `nextButtonActivationKey` and `submitButtonLabel` are removed, along with `focusOnButton`, `focusedButtonIndex`, `focusBackButton` and `focusNextButton` on `MultiScreenFormState`. The host app handles Enter and Escape.
+- **BREAKING**: `MultiScreenFormState.focusUp` and `focusDown` now move the cursor over the options of the current screen.
+
 ## 0.13.0
 
 - **FEAT**: Multi screen forms can now require a selection before moving past a config (`selectionRequired`), and multi-select configs can mark options that can not be combined with others (`exclusiveOptions`).

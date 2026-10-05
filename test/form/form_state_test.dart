@@ -127,6 +127,37 @@ enum IdeOption implements FormConfigOption {
   final String label;
 }
 
+class _SqliteDefaultConfig
+    implements FormSelectionConfig<DatabaseConfigOption> {
+  const _SqliteDefaultConfig();
+
+  @override
+  String get label => 'Database';
+
+  @override
+  List<DatabaseConfigOption> get options => DatabaseConfigOption.values;
+
+  @override
+  Set<DatabaseConfigOption> get defaultOptions => const {
+    DatabaseConfigOption.sqlite,
+  };
+
+  @override
+  bool get multiSelect => false;
+
+  @override
+  Set<DatabaseConfigOption> get exclusiveOptions => const {};
+
+  @override
+  bool get selectionRequired => false;
+
+  @override
+  FormDescription? get description => null;
+
+  @override
+  List<FormRequirement> get requirements => const [];
+}
+
 class _InputConfigWithSqliteRequirement implements FormInputConfig {
   @override
   String get label => 'Input With Requirement';
@@ -389,6 +420,38 @@ void main() {
     );
 
     test(
+      'when no option is selected for a multi-select config, '
+      'then its selected label is None',
+      () {
+        expect(state.selectedLabelFor(TestConfig.ide), 'None');
+      },
+    );
+
+    test(
+      'when several options are selected for a multi-select config, '
+      'then its selected label lists them',
+      () {
+        state.updateSelectedOption(TestConfig.ide, IdeOption.vsCode);
+        state.updateSelectedOption(TestConfig.ide, IdeOption.cursor);
+
+        expect(state.selectedLabelFor(TestConfig.ide), 'VS Code, Cursor');
+      },
+    );
+
+    test(
+      'when a boolean config is disabled, '
+      'then its selected label is Disabled',
+      () {
+        state.updateSelectedOption(
+          TestConfig.auth,
+          BoolFormConfigOption.disabled,
+        );
+
+        expect(state.selectedLabelFor(TestConfig.auth), 'Disabled');
+      },
+    );
+
+    test(
       'then isOptionSelectedForConfig returns true for option that is selected for a config',
       () {
         final status = state.isOptionSelectedForConfig(
@@ -503,6 +566,21 @@ void main() {
       );
     });
   });
+
+  test(
+    'Given a FormState with a config whose default is not its first option, '
+    'when created, '
+    'then the focused option is the default option',
+    () {
+      const config = _SqliteDefaultConfig();
+      final state = FormState([config]);
+
+      expect(
+        state.getFocusedOptionIndexFor(config),
+        DatabaseConfigOption.values.indexOf(DatabaseConfigOption.sqlite),
+      );
+    },
+  );
 
   group('Given a FormState with a FormInputConfig containing requirements', () {
     final config = _InputConfigWithSqliteRequirement();

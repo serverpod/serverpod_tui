@@ -56,6 +56,7 @@ class FormConfiguration extends StatelessComponent {
     required this.config,
     required this.focused,
     required this.rebuild,
+    this.vertical = false,
     this.onFormInputSubmit,
     this.onFormInputArrowUp,
     this.onFormInputArrowDown,
@@ -65,6 +66,10 @@ class FormConfiguration extends StatelessComponent {
   final FormConfig config;
   final bool focused;
   final VoidCallback rebuild;
+
+  /// Whether select options are listed vertically with a cursor on the
+  /// focused option, instead of side by side.
+  final bool vertical;
 
   /// Callback for when [LogicalKey.enter] is received on a focused text input.
   final VoidCallback? onFormInputSubmit;
@@ -101,6 +106,7 @@ class FormConfiguration extends StatelessComponent {
         config: config,
         focused: focused,
         rebuild: rebuild,
+        vertical: vertical,
       );
     }
 
@@ -110,6 +116,7 @@ class FormConfiguration extends StatelessComponent {
         config: config,
         focused: focused,
         rebuild: rebuild,
+        vertical: vertical,
       );
     }
 
@@ -118,6 +125,7 @@ class FormConfiguration extends StatelessComponent {
       config: config,
       focused: focused,
       rebuild: rebuild,
+      vertical: vertical,
     );
   }
 }
@@ -238,12 +246,16 @@ class FormSingleSelectConfiguration extends StatelessComponent {
     required this.config,
     required this.focused,
     required this.rebuild,
+    this.vertical = false,
   });
 
   final FormState state;
   final FormSelectionConfig config;
   final bool focused;
   final VoidCallback rebuild;
+
+  /// See [FormConfiguration.vertical].
+  final bool vertical;
 
   @override
   Component build(BuildContext context) {
@@ -252,12 +264,13 @@ class FormSingleSelectConfiguration extends StatelessComponent {
 
     return FormConfigurationLayout(
       config: config,
-      child: Wrap(
-        spacing: 2,
+      child: _OptionList(
+        vertical: vertical,
         children: [
           for (final option in config.options.indexed)
             _FormOptionRadio(
               option: option.$2,
+              showCursor: vertical,
               focused: focused && focusedOptionIndex == option.$1,
               selected: selectedOption == option.$2,
               onTap: () {
@@ -279,12 +292,16 @@ class FormBooleanConfiguration extends StatelessComponent {
     required this.config,
     required this.focused,
     required this.rebuild,
+    this.vertical = false,
   });
 
   final FormState state;
   final FormSelectionConfig config;
   final bool focused;
   final VoidCallback rebuild;
+
+  /// See [FormConfiguration.vertical].
+  final bool vertical;
 
   @override
   Component build(BuildContext context) {
@@ -296,6 +313,7 @@ class FormBooleanConfiguration extends StatelessComponent {
       config: config,
       child: _FormOptionCheckbox(
         option: BoolFormConfigOption.enabled,
+        showCursor: vertical,
         focused: focused,
         selected: selectedOption == defaultOption,
         onTap: () {
@@ -318,12 +336,16 @@ class FormMultiSelectConfiguration extends StatelessComponent {
     required this.config,
     required this.focused,
     required this.rebuild,
+    this.vertical = false,
   });
 
   final FormState state;
   final FormSelectionConfig config;
   final bool focused;
   final VoidCallback rebuild;
+
+  /// See [FormConfiguration.vertical].
+  final bool vertical;
 
   @override
   Component build(BuildContext context) {
@@ -332,12 +354,13 @@ class FormMultiSelectConfiguration extends StatelessComponent {
 
     return FormConfigurationLayout(
       config: config,
-      child: Wrap(
-        spacing: 2,
+      child: _OptionList(
+        vertical: vertical,
         children: [
           for (final option in config.options.indexed)
             _FormOptionCheckbox(
               option: option.$2,
+              showCursor: vertical,
               focused: focused && focusedOptionIndex == option.$1,
               selected: selectedOptions.contains(option.$2),
               onTap: () {
@@ -355,12 +378,14 @@ class FormMultiSelectConfiguration extends StatelessComponent {
 class _FormOptionRadio extends StatelessComponent {
   const _FormOptionRadio({
     required this.option,
+    required this.showCursor,
     required this.focused,
     required this.selected,
     required this.onTap,
   });
 
   final FormConfigOption option;
+  final bool showCursor;
   final bool focused;
   final bool selected;
   final VoidCallback onTap;
@@ -369,10 +394,14 @@ class _FormOptionRadio extends StatelessComponent {
   Component build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: RadioButton(
-        label: option.label,
-        value: selected,
+      child: _OptionRow(
+        showCursor: showCursor,
         focused: focused,
+        child: RadioButton(
+          label: option.label,
+          value: selected,
+          focused: focused,
+        ),
       ),
     );
   }
@@ -382,12 +411,14 @@ class _FormOptionRadio extends StatelessComponent {
 class _FormOptionCheckbox extends StatelessComponent {
   const _FormOptionCheckbox({
     required this.option,
+    required this.showCursor,
     required this.focused,
     required this.selected,
     required this.onTap,
   });
 
   final FormConfigOption option;
+  final bool showCursor;
   final bool focused;
   final bool selected;
   final VoidCallback onTap;
@@ -396,11 +427,67 @@ class _FormOptionCheckbox extends StatelessComponent {
   Component build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Checkbox(
-        label: option.label,
-        value: selected,
+      child: _OptionRow(
+        showCursor: showCursor,
         focused: focused,
+        child: Checkbox(
+          label: option.label,
+          value: selected,
+          focused: focused,
+        ),
       ),
+    );
+  }
+}
+
+/// Lists options vertically, or side by side when not [vertical].
+class _OptionList extends StatelessComponent {
+  const _OptionList({required this.vertical, required this.children});
+
+  final bool vertical;
+  final List<Component> children;
+
+  @override
+  Component build(BuildContext context) {
+    if (!vertical) return Wrap(spacing: 2, children: children);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+}
+
+/// An option, with a cursor in front of it when focused if [showCursor].
+class _OptionRow extends StatelessComponent {
+  const _OptionRow({
+    required this.showCursor,
+    required this.focused,
+    required this.child,
+  });
+
+  final bool showCursor;
+  final bool focused;
+  final Component child;
+
+  @override
+  Component build(BuildContext context) {
+    if (!showCursor) return child;
+
+    final theme = ServerpodTheme.of(context);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          focused ? '❯' : ' ',
+          style: TextStyle(
+            color: theme.activationKey,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        child,
+      ],
     );
   }
 }

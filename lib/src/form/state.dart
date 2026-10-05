@@ -53,8 +53,11 @@ class FormState {
 
       configurations.add(config);
       if (config is FormSelectionConfig) {
-        _selectionState[config] ??= config.defaultOptions;
-        _focusedOptionState[config] ??= _FormConfigState(config);
+        final selected = _selectionState[config] ??= config.defaultOptions;
+        _focusedOptionState[config] ??= _FormConfigState(
+          config,
+          _indexOfFirst(config, selected),
+        );
       } else if (config is FormInputConfig) {
         final controller = _inputState[config] ??= ValidatingTextController();
         final validator = _validators[config];
@@ -179,6 +182,36 @@ class FormState {
     return selectedOptions.intersection(req.configOptions).isEmpty;
   }
 
+  /// The label of the current value of [config], as shown in a summary.
+  String selectedLabelFor(FormConfig config) {
+    return switch (config) {
+      FormInputConfig config => getInputFor(config) ?? '',
+      FormSelectionConfig config => _selectionLabelFor(config),
+    };
+  }
+
+  String _selectionLabelFor(FormSelectionConfig config) {
+    if (config.isBoolean) {
+      final enabled =
+          getSelectedOptionFor(config) == BoolFormConfigOption.enabled;
+      return enabled ? 'Enabled' : 'Disabled';
+    }
+    final options = getSelectedOptionsFor(config) ?? {};
+    final labels = options.map((option) => option.label).join(', ');
+    return labels.isEmpty ? 'None' : labels;
+  }
+
+  /// Index of the first of [selected] in [config]'s options, or 0.
+  int _indexOfFirst(
+    FormSelectionConfig config,
+    Set<FormConfigOption> selected,
+  ) {
+    final first = selected.firstOrNull;
+    if (first == null) return 0;
+    final index = config.options.indexOf(first);
+    return index < 0 ? 0 : index;
+  }
+
   /// Returns the focused option for [config].
   int? getFocusedOptionIndexFor(FormConfig config) {
     final state = _focusedOptionState[config];
@@ -238,9 +271,8 @@ class FormState {
   }
 }
 
-/// State for a multi-screen `Form` component
-/// with support for screen navigation
-/// and focus management for Back/Next buttons.
+/// State for a multi-screen `Form` component. Each config is a screen,
+/// with a cursor that moves through the options of the current screen.
 class MultiScreenFormState extends FormState {
   MultiScreenFormState(super._configValues);
 
@@ -258,109 +290,50 @@ class MultiScreenFormState extends FormState {
   /// Whether the current screen is the summary screen.
   bool get isSummary => _currentScreenIndex >= configScreenCount;
 
+  /// The config shown on the current screen, null on the summary.
+  FormConfig? get currentConfig =>
+      isSummary ? null : configurations[_currentScreenIndex];
+
+  /// The configs answered before the current screen.
+  List<FormConfig> get answeredConfigs =>
+      configurations.take(_currentScreenIndex).toList();
+
   /// False while the current screen is missing a required selection.
   bool get canAdvance {
-    if (isSummary) return true;
-    final config = configurations[_currentScreenIndex];
+    final config = currentConfig;
     if (config is! FormSelectionConfig || !config.selectionRequired) {
       return true;
     }
     return getSelectedOptionsFor(config)?.isNotEmpty ?? false;
   }
 
-  bool _focusOnButton = false;
-
-  /// Whether the Back/Next buttons are focused in multi-screen mode.
-  bool get focusOnButton => _focusOnButton;
-
-  int _focusedButtonIndex = 0;
-
-  /// Index of the focused button (0 = Back, 1 = Next).
-  int get focusedButtonIndex => _focusedButtonIndex;
-
-  /// Unfocus form options.
-  void _unfocusOptions() {
-    _focusedConfigIndex = -1;
-  }
-
-  /// Moves focus to the back button in a multi-screen flow.
-  void focusBackButton() {
-    _unfocusOptions();
-    _focusOnButton = true;
-    _focusedButtonIndex = 0;
-  }
-
-  /// Moves focus to the next button in a multi-screen flow.
-  void focusNextButton() {
-    _unfocusOptions();
-    _focusOnButton = true;
-    _focusedButtonIndex = 1;
-  }
-
-  /// Moves focus to the next element vertically.
-  /// If buttons are not in focus in multi-screen flow,
-  /// then the focus is moved to the buttons.
   @override
-  void focusDown() {
-    if (!_focusOnButton) {
-      if (isSummary || _currentScreenIndex > 0) {
-        focusBackButton();
-      } else if (!isSummary) {
-        focusNextButton();
-      }
-    }
+  void focusUp() => _moveCursor(-1);
+
+  @override
+  void focusDown() => _moveCursor(1);
+
+  /// Moves the cursor over the options of the current screen.
+  void _moveCursor(int delta) {
+    final config = currentConfig;
+    if (config is! FormSelectionConfig || config.isBoolean) return;
+    requestFocus(config);
+    updateFocusedConfigOption(delta);
   }
 
-  /// Moves focus to the previous element vertically.
-  /// If buttons are in focus in multi-screen flow,
-  /// then the focus is moved to the form.
   @override
-  void focusUp() {
-    if (_focusOnButton) {
-      _focusOnButton = false;
-      if (_currentScreenIndex < configurations.length) {
-        final config = configurations[_currentScreenIndex];
-        requestFocus(config);
-      }
-    }
+  void onSelect() {
+    if (!isSummary) selectConfigOption();
   }
 
-  /// Moves focus to the next element horizontally.
-  /// If buttons are in focus (only true in multi-screen flow),
-  /// then the focus is moved to the next button.
-  ///
-  /// If buttons are not in focus (form is focused),
-  /// the next form config option is focused.
-  @override
-  void focusRight() {
-    if (_focusOnButton) {
-      if (_focusedButtonIndex == 0) {
-        focusNextButton();
-      }
-    } else if (_currentScreenIndex < configurations.length) {
-      final config = configurations[_currentScreenIndex];
-      requestFocus(config);
-      updateFocusedConfigOption(1);
-    }
-  }
-
-  /// Moves focus to the previous element horizontally.
-  /// If buttons are in focus (only true in multi-screen flow),
-  /// then the focus is moved to the previous button.
-  ///
-  /// If buttons are not in focus (form is focused),
-  /// the previous form config option is focused.
-  @override
-  void focusLeft() {
-    if (_focusOnButton) {
-      if (_focusedButtonIndex == 1 && _currentScreenIndex > 0) {
-        focusBackButton();
-      }
-    } else if (_currentScreenIndex < configurations.length) {
-      final config = configurations[_currentScreenIndex];
-      requestFocus(config);
-      updateFocusedConfigOption(-1);
-    }
+  /// Selects the option under the cursor when the current screen is
+  /// single-select, so that Enter confirms the highlighted row.
+  void confirmFocusedOption() {
+    final config = currentConfig;
+    if (config is! FormSelectionConfig) return;
+    if (config.multiSelect || config.isBoolean) return;
+    requestFocus(config);
+    selectConfigOption();
   }
 
   /// Advances to the next screen in multi-screen mode.
@@ -368,7 +341,7 @@ class MultiScreenFormState extends FormState {
     if (hasSingleScreen || !canAdvance) return;
     if (_currentScreenIndex < configScreenCount) {
       _currentScreenIndex++;
-      _updateFormFocus();
+      _focusCurrentScreen();
     }
   }
 
@@ -377,54 +350,37 @@ class MultiScreenFormState extends FormState {
     if (hasSingleScreen) return;
     if (_currentScreenIndex > 0) {
       _currentScreenIndex--;
-      _updateFormFocus();
+      _focusCurrentScreen();
     }
   }
 
-  /// Selects a focused button or form option.
-  /// If a button is focused, navigates to the previous/next screen.
-  /// Otherwise, if a form option is focused, selects it.
-  @override
-  void onSelect() {
-    if (_focusOnButton) {
-      switch (_focusedButtonIndex) {
-        case 0:
-          previousScreen();
-          break;
-        case 1:
-          nextScreen();
-          break;
-      }
-    } else {
-      selectConfigOption();
-    }
-  }
+  /// Focuses the current screen's config and puts the cursor on its
+  /// selected option (single-select) or its first option.
+  void _focusCurrentScreen() {
+    final config = currentConfig;
+    if (config == null) return;
+    requestFocus(config);
+    if (config is! FormSelectionConfig) return;
 
-  /// Focus form config for the current screen.
-  void _updateFormFocus() {
-    _focusOnButton = false;
-    if (_currentScreenIndex < configurations.length) {
-      final config = configurations[_currentScreenIndex];
-      requestFocus(config);
-      final currentFocus = getFocusedOptionIndexFor(config) ?? 0;
-      if (currentFocus > 0) {
-        updateFocusedConfigOption(-currentFocus);
-      }
-    } else {
-      // Focus action button on summary screen.
-      focusNextButton();
+    var target = 0;
+    if (!config.multiSelect) {
+      final selected = getSelectedOptionFor(config);
+      if (selected != null) target = config.options.indexOf(selected);
     }
+    final current = getFocusedOptionIndexFor(config) ?? 0;
+    updateFocusedConfigOption(target - current);
   }
 }
 
 /// Internal state tracking the focused option for a [FormConfig].
 class _FormConfigState<T extends FormSelectionConfig> {
-  _FormConfigState(this.config) : _maxIndex = config.options.length - 1;
+  _FormConfigState(this.config, [this._focusedOptionIndex = 0])
+    : _maxIndex = config.options.length - 1;
 
   final T config;
   final int _maxIndex;
 
-  late int _focusedOptionIndex = 0;
+  int _focusedOptionIndex;
   int get focusedOptionIndex => _focusedOptionIndex;
 
   void _updateFocusedOption(int delta) {

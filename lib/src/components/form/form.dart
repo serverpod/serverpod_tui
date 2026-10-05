@@ -17,7 +17,7 @@ class Form extends StatelessComponent {
   });
 
   /// Creates a [Form] configured for multi-screen navigation.
-  /// Each config is shown on its own screen with Back/Next buttons.
+  /// Each config is shown on its own screen, below the answers so far.
   /// Requires [MultiScreenFormState] to be used as the state.
   const factory Form.multiScreen({
     Key? key,
@@ -26,11 +26,8 @@ class Form extends StatelessComponent {
     required VoidCallback rebuild,
     double spacing,
     EdgeInsets padding,
-    LogicalKey backButtonActivationKey,
-    LogicalKey nextButtonActivationKey,
     VoidCallback? onSubmit,
     String? summaryDescription,
-    String? submitButtonLabel,
   }) = MultiScreenForm;
 
   final FormState state;
