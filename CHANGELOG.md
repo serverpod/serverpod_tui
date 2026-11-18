@@ -1,3 +1,8 @@
+## 0.15.0
+
+- **CHORE**: `serverpod_logging` now accepts both `0.1.x` and `0.2.x`.
+- **CHORE**: Removed the unused `cli_tools` and `path` dependencies.
+
 ## 0.14.0
 
 - **FEAT**: Multi screen forms are now sequential prompts. Options are listed vertically with a `❯` cursor, the answers given so far are listed above the current config, and the last screen lists every answer.
