@@ -205,10 +205,10 @@ packages:
     dependency: transitive
     description:
       name: isolated_object
-      sha256: b52bf712237ee196a3724e8467fe1ef9286842070c22fcd57e01455e1539ab8f
+      sha256: "4d6e8c7b9c2e182fc683b257efb434aed0facedcf48dac31038567bec17ff588"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.0"
+    version: "0.2.0"
   lints:
     dependency: "direct dev"
     description:
@@ -245,10 +245,10 @@ packages:
     dependency: "direct main"
     description:
       name: meta
-      sha256: df0c643f44ad098eb37988027a8e2b2b5a031fd3977f06bbfd3a76637e8df739
+      sha256: "307249ce4ff29d58a18e97f6345f539382eb9c9c29ecda628900f31de0443dd9"
       url: "https://pub.dev"
     source: hosted
-    version: "1.18.2"
+    version: "1.19.0"
   mime:
     dependency: transitive
     description:
@@ -333,10 +333,10 @@ packages:
     dependency: "direct main"
     description:
       name: serverpod_logging
-      sha256: "177d3f53144f2811c2df01bb5134fae59db48129fac62efef11d12407feae6a7"
+      sha256: "00ecda3eabf48a6c2b50335efc68548b54afd14267f7fe501307530b08eab43b"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.0"
+    version: "0.2.0"
   shelf:
     dependency: transitive
     description:
