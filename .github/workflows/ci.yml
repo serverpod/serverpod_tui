@@ -29,8 +29,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        dart: [3.10.3]
+        dart: [3.10.3, 3.14.1]
 
     steps:
       - name: Check out repository
