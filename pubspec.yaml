@@ -9,13 +9,11 @@ environment:
   sdk: ^3.10.3
 
 dependencies:
-  cli_tools: ^0.13.1
   collection: ^1.18.0
   intl: ^0.20.2
   meta: ^1.15.0
   nocterm: ^0.9.0
-  path: ^1.9.0
-  serverpod_logging: ^0.1.0
+  serverpod_logging: ">=0.1.0 <0.3.0"
   stream_transform: ^2.1.0
 
 dev_dependencies:
